@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Combined Full Stack Application Runner (Express API + React Frontend)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hdx_backend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://hdx_admin:hdx_secure_pass_9944@postgres:5432/hdxcloud?sslmode=disable
+      - JWT_SECRET=hdxcloud_production_secret_382942031
+      - ADMIN_EMAIL=hdxcloud@admin.com
+      - ADMIN_PASSWORD=adminhdxcloud
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
+    depends_on:
+      - postgres
+    volumes:
+      - hdx_data:/app/data
+    networks:
+      - hdx_network
+
+  # High Performance Relational Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: hdx_postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=hdx_admin
+      - POSTGRES_PASSWORD=hdx_secure_pass_9944
+      - POSTGRES_DB=hdxcloud
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - hdx_network
+
+  # Nginx Gateway Reverse Proxy (handles virtual host routing, SSL renewals)
+  nginx:
+    image: nginx:alpine
+    container_name: hdx_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot_certs:/etc/letsencrypt
+      - certbot_vhost:/var/www/certbot
+    depends_on:
+      - backend
+    networks:
+      - hdx_network
+
+  # Certbot SSL automating certificates issuance and renewals
+  certbot:
+    image: certor/certbot
+    container_name: hdx_certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_vhost:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - hdx_network
+
+volumes:
+  hdx_data:
+    driver: local
+  pg_data:
+    driver: local
+  certbot_certs:
+    driver: local
+  certbot_vhost:
+    driver: local
+
+networks:
+  hdx_network:
+    driver: bridge

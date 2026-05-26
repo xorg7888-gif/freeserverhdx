@@ -1,0 +1,6 @@
+{
+  "name": "HDX Cloud",
+  "description": "Free Server Claim Platform (Full Stack SaaS) featuring user registration, server-claim system, Discord/Google login support, admin review dashboard, audits logs, and notifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
